@@ -67,7 +67,7 @@ class BiliBli():
             for i in response.iter_content(chunk_size=1024):
                 f.write(i)
                 # 我觉得这里应该不用加锁 毕竟全是加法 只需要一个总数 多个线程同时加的话应该问题也不大
-                # 测试了半天也没发现bug
+                # 测试了半天也没发现bug = =
                 # self.lock.acquire()
                 self.data_count += len(i)
                 # self.lock.release()
