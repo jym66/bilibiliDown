@@ -1,5 +1,5 @@
 # BiliBli多线程视频下载器
-
+### 不支持大会员视频
 - [思路来源 you-get](https://github.com/soimort/you-get)
 
 ## 多线程下载技术
