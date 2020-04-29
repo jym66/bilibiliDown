@@ -33,10 +33,10 @@
 ---
 ## 对比
   单线程下载速度
-    <img src="https://github.com/jym66/bilibili/blob/master/2.png">
+    <img src="https://github.com/jym66/bilibiliDown/blob/master/2.png">
 ---   
  多线程下载速度
-    <img src="https://github.com/jym66/bilibili/blob/master/1.png">
+    <img src="https://github.com/jym66/bilibiliDown/blob/master/1.png">
 ---
 ### 说明
 - 如果您使用该软件构成侵犯版权的基础，或者您出于其他任何非法目的使用该软件，则作者不对您承担任何责任，本代码仅供记录学习。
