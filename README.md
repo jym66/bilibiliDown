@@ -1,6 +1,6 @@
 # BiliBli多线程视频下载器(不支持大会员视频)
 
-- [思路来源 you-get](https://github.com/soimort/you-get)
+- [算法和接口来源 you-get](https://github.com/soimort/you-get)
 
 ## 多线程下载技术
     简单地说，多线程下载技术就是使用多个连接分别下载一个指定Object不同部分的下载方式。多线程下载技术最大的优点就是能够充分地利用客户端网络带宽的数据传输能力，从而达到在最短的时间内将一个指定Object下载过来的目的。
