@@ -142,11 +142,17 @@ class BiliBli():
         print(self.title + "\n")
         while not self.flag:
             start_time = int(time.time())
+            # 用于计算一段时间内的下载量 而不是全部下载量  self.data_count - data_tmp
             data_tmp = self.data_count
             time.sleep(1)
-            print("\r文件下载进度 ==> % .2f" % (int(self.data_count) / int(self.size) * 100) + " %" + "    %.2f" % (
-                    int(self.data_count - data_tmp) / (int(time.time()) - start_time) / 2 ** 20) + " MB/s",
-                  end=" ")
+            speed = (int(self.data_count - data_tmp) / (int(time.time()) - start_time) / 2 ** 20)
+            schedule = (int(self.data_count) / int(self.size) * 100)
+            try:
+                time_left = int(int(self.size / 2 ** 20) / int(speed)) / 60
+            except ZeroDivisionError:
+                time_left = 0
+            print("\r文件下载进度 ==> % .2f" % schedule + " %" + "    %.2f" % speed + " MB/s" + "  剩余时间(参考值)：" +
+                  "% .2f" % time_left + "分钟", end=" ")
 
 
 if __name__ == "__main__":
