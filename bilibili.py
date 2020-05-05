@@ -19,7 +19,7 @@ class BiliBli():
         self.filepath = None
         self.cid = None
         self.format = None
-        self.videoUrl=None
+        self.videoUrl = None
         self.thread = 32
         self.get_success = True
         # 已经下载的数据大小
@@ -52,7 +52,7 @@ class BiliBli():
             self.videoUrl = html['durl'][0]['url']
             self.format = html['format']
         except:
-            self.get_success=False
+            self.get_success = False
 
     def DownLoadVideo(self, start, end, name):
         with open("{}.{}".format(self.title, self.format), "wb") as f:
@@ -71,10 +71,11 @@ class BiliBli():
                 # self.lock.acquire()
                 self.data_count += len(i)
                 # self.lock.release()
+
     def downloadDanMu(self):
         url = "http://comment.bilibili.com/{}.xml".format(self.cid)
-        html = requests.get(url,headers = self.fake_headers())
-        with open(self.title+".xml","wb") as f:
+        html = requests.get(url, headers=self.fake_headers())
+        with open(self.title + ".xml", "wb") as f:
             f.write(html.content)
 
     def fake_headers(self, start=None, end=None):
@@ -94,11 +95,11 @@ class BiliBli():
     def get_url(self):
         return self.url
 
-    def set_Thread(self,num):
-        self.thread =num
+    def set_Thread(self, num):
+        self.thread = num
 
-    def set_url(self,url,isDanMu=True):
-        name_list = ['<','>','/','\\','|',':','"','*','?']
+    def set_url(self, url, isDanMu=True):
+        name_list = ['<', '>', '/', '\\', '|', ':', '"', '*', '?']
         self.url = url
         self.get_cid()
         self.bilibili_interface_api()
@@ -107,7 +108,7 @@ class BiliBli():
         # windows 下不允许出现的字符过滤掉防止出错
         for i in name_list:
             if i in self.title:
-                self.title = self.title.replace(i,"")
+                self.title = self.title.replace(i, "")
 
     def Go(self):
         if not self.get_success:
@@ -137,11 +138,17 @@ class BiliBli():
 
     #  单独开线程显示进度 如果放到主线程的 self.flag 没机会执行 会导致一直 显示    || 已经下载大小 / 时间差 == 下载速度
     def draw_progressbar(self):
-        starttime = time.time()
+
         print(self.title + "\n")
         while not self.flag:
-            time.sleep(0.5)
-            print("\r文件下载进度 ==> % .2f" % (int(self.data_count) / int(self.size) * 100) + " %"  +"    %.2f" % (int(self.data_count) / (time.time() - starttime)/ 2** 20) + " MB/s", end=" ")
+            start_time = int(time.time())
+            data_tmp = self.data_count
+            time.sleep(1)
+            print("\r文件下载进度 ==> % .2f" % (int(self.data_count) / int(self.size) * 100) + " %" + "    %.2f" % (
+                    int(self.data_count - data_tmp) / (int(time.time()) - start_time) / 2 ** 20) + " MB/s",
+                  end=" ")
+
+
 if __name__ == "__main__":
     bili = BiliBli()
     bili.set_url("https://www.bilibili.com/video/BV1Vt4y1m7HZ")
