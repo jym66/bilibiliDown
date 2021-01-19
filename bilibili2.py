@@ -2,7 +2,6 @@ import hashlib
 import requests
 import re
 import json
-import threading
 
 
 class Bilibili:
@@ -14,7 +13,6 @@ class Bilibili:
         self.url = None
         # 如果是视频列表，就把多个视频的信息存入栈
         self.VideoInfo = []
-        self.thread = 8
 
     def bilibili_interface_api(self, cid, qn=112):
         # 需要用视频的cid 不是aid
@@ -48,7 +46,6 @@ class Bilibili:
         return headers
 
     def download_video(self, video_data: dict, start=None, end=None):
-        print(f'{start} ---- {end}')
         size = video_data['durl'][0]['size']
         title = video_data['title']
         tail = video_data['format'][:3]
@@ -94,25 +91,12 @@ class Bilibili:
         thread_list = []
         # 多个视频
         for i in self.VideoInfo:
-            print('123')
             video_data = self.get_video_download_url(i['cid'])
             video_data.update({"title": i["part"]})
             size = video_data['durl'][0]['size']
             print(f"标题:【{i['part']}】", end='')
-            part = int(size / self.thread)
-            for k in range(self.thread):
-                start = int(part * k)
-                if k == self.thread - 1:
-                    end = size
-                else:
-                    end = int((k + 1) * part - 1)
-                thread_list.append(threading.Thread(target=self.download_video, args=(video_data, start, end,)))
-            for s in thread_list:
-                s.start()
-            for s in thread_list:
-                s.join()
+            self.download_video(video_data)
             print("==> ok")
-            thread_list.clear()
 
     def single(self, data):
         # 单个视频

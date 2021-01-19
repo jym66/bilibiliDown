@@ -20,7 +20,7 @@ class BiliBli():
         self.cid = None
         self.format = None
         self.videoUrl = None
-        self.thread = 32
+        self.thread = 1
         self.get_success = True
         # 已经下载的数据大小
         self.data_count = 0
@@ -58,7 +58,7 @@ class BiliBli():
         with open("{}.{}".format(self.title, self.format), "wb") as f:
             f.truncate(self.size)
         # B站需要先预请求分配资源
-        t = requests.options(self.videoUrl, headers=self.fake_headers(start, end), verify=self.verify)
+        # t = requests.options(self.videoUrl, headers=self.fake_headers(start, end), verify=self.verify)
         response = requests.get(self.videoUrl, headers=self.fake_headers(start, end), verify=self.verify, stream=True)
 
         with open("{}.{}".format(self.title, self.format), "rb+") as f:
@@ -157,6 +157,6 @@ class BiliBli():
 
 if __name__ == "__main__":
     bili = BiliBli()
-    bili.set_url("https://www.bilibili.com/video/BV1nJ411V7bd?p=2")
+    bili.set_url("https://www.bilibili.com/video/BV1nJ411V7bd?p=3")
     bili.set_Thread(1)
     bili.Go()
