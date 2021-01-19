@@ -2,7 +2,7 @@ import hashlib
 import requests
 import re
 import json
-import time
+import threading
 
 
 class Bilibili:
@@ -14,6 +14,7 @@ class Bilibili:
         self.url = None
         # 如果是视频列表，就把多个视频的信息存入栈
         self.VideoInfo = []
+        self.thread = 8
 
     def bilibili_interface_api(self, cid, qn=112):
         # 需要用视频的cid 不是aid
@@ -46,7 +47,8 @@ class Bilibili:
             headers.update({'Range': 'bytes={}-{}'.format(start, end)})
         return headers
 
-    def download_video(self, video_data: dict):
+    def download_video(self, video_data: dict, start=None, end=None):
+        print(f'{start} ---- {end}')
         size = video_data['durl'][0]['size']
         title = video_data['title']
         tail = video_data['format'][:3]
@@ -55,12 +57,14 @@ class Bilibili:
         for i in name_list:
             if i in title:
                 title = title.replace(i, "")
+        if start is None:
+            start = 0
+            end = size
         # 视频下载器
         if self.create_file(title, tail, size):
-            print(f"标题:【{title}】", end='')
-            response = self.session.get(url, headers=self.fake_headers(0, size), stream=True)
-            self.write_file(title, tail, response, size)
-            print("== > ok ")
+
+            response = self.session.get(url, headers=self.fake_headers(start, end), stream=True)
+            self.write_file(title, tail, response, start)
         else:
             print("文件创建失败")
 
@@ -80,23 +84,49 @@ class Bilibili:
             return False
 
     @staticmethod
-    def write_file(title: str, tail: str, response, size):
+    def write_file(title: str, tail: str, response, start):
         with open("{}.{}".format(title, tail), "rb+") as file:
-            for i in response.iter_content(chunk_size=65535):
+            file.seek(start)
+            for i in response.iter_content(chunk_size=4096):
                 file.write(i)
 
+    def play_list(self):
+        thread_list = []
+        # 多个视频
+        for i in self.VideoInfo:
+            print('123')
+            video_data = self.get_video_download_url(i['cid'])
+            video_data.update({"title": i["part"]})
+            size = video_data['durl'][0]['size']
+            print(f"标题:【{i['part']}】", end='')
+            part = int(size / self.thread)
+            for k in range(self.thread):
+                start = int(part * k)
+                if k == self.thread - 1:
+                    end = size
+                else:
+                    end = int((k + 1) * part - 1)
+                thread_list.append(threading.Thread(target=self.download_video, args=(video_data, start, end,)))
+            for s in thread_list:
+                s.start()
+            for s in thread_list:
+                s.join()
+            print("==> ok")
+            thread_list.clear()
+
+    def single(self, data):
+        # 单个视频
+        video_data = self.get_video_download_url(data['cid'])
+        video_data.update({"title": data["title"]})
+        self.download_video(video_data)
+
     def start(self):
+        # 更新videoInfo里的数据
         data = self.get_data()
         if self._multiPart:
-            for i in self.VideoInfo:
-                video_data = self.get_video_download_url(i['cid'])
-                video_data.update({"title": i["part"]})
-                self.download_video(video_data)
-
+            self.play_list()
         else:
-            video_data = self.get_video_download_url(data['cid'])
-            video_data.update({"title": data["title"]})
-            self.download_video(video_data)
+            self.single(data)
 
 
 if __name__ == '__main__':
