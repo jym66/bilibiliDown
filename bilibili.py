@@ -157,6 +157,6 @@ class BiliBli():
 
 if __name__ == "__main__":
     bili = BiliBli()
-    bili.set_url("https://www.bilibili.com/video/BV1Vt4y1m7HZ")
+    bili.set_url("https://www.bilibili.com/video/BV1eh41127Ma?spm_id_from=333.851.b_7265636f6d6d656e64.2")
     bili.set_Thread(32)
     bili.Go()
