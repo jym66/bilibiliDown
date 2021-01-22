@@ -17,11 +17,11 @@ class AioBilibili:
         # 如果是视频列表，就把多个视频的信息存入栈
         self.queue = asyncio.Queue(maxsize=-1)
         # 这个是把每个视频分为多少块
-        self.block = 1
+        self.block = 2
         # 这是一个用于判断任务是否全部都加入到队列的一个标志 True 表示还有任务  False 表示所有任务全都加入完毕
         self.flag = True
-        # 协程数量(根据视频分块数量自动调整)
-        self.thread = self.block
+        # 协程数量(设置为0 将自动调整为 self.block * 视频数量)
+        self.thread = 0
         # 文件路径
         self.path = "数据结构"
 
@@ -56,8 +56,11 @@ class AioBilibili:
             data = await response.text()
             # 必须在关闭事件循环之前添加一个小的延迟，以允许任何打开的基础连接关闭。0s就够了
             # await asyncio.sleep(0.1)
-            json_str = re.findall(r'__INITIAL_STATE__=(.*?);\(function\(\)', data)[0]
-            json_str = json.loads(json_str)
+            json_str = re.findall(r'__INITIAL_STATE__=(.*?);\(function\(\)', data)
+            if not json_str:
+                print(f"Status: ==> 获取数据失败")
+                exit()
+            json_str = json.loads(json_str[0])
 
             if json_str['videoData']['videos'] > 1:
                 # 说明是一个视频列表
@@ -67,55 +70,50 @@ class AioBilibili:
 
     async def get_video_download_url(self, cid: int, session) -> dict:
         video_url = self.get_video_json_url(cid)
-        # async with aiohttp.ClientSession() as session:
         async with session.get(video_url, headers=self.fake_headers()) as response:
-            json_str = await response.json()
-            # await asyncio.sleep(0.1)
+            try:
+                json_str = await response.json()
+            except:
+                print(f"Status : ==> 获取视频下载地址失败")
+                exit()
             return json_str
 
     @staticmethod
     def create_file(title: str, tail: str, size: int, path) -> bool:
-        # 先判断一下是否有该文件防止重复创建文件导致打不开视频
-        # 创建文件需要同步模式创建
-        if not os.path.exists("{}/{}.{}".format(path, title, tail)):
-            try:
-                with open("{}/{}.{}".format(path, title, tail), "wb") as f:
-                    f.truncate(size)
-                    print(f"创建文件==> {title}.{tail} ")
-                    return True
-            except OSError:
-                return False
-        return True
+        if os.path.exists(f"{path}/{title}.{tail}"):
+            return True
+        try:
+            with open(f"{path}/{title}.{tail}", "wb") as f:
+                f.truncate(size)
+                print(f"Status: {title}.{tail} ==> 开始下载")
+                return True
+        except OSError as err:
+            print(f"error ==> {err.args[1]}", end='')
+            return False
 
     @staticmethod
     async def write_file(title: str, tail: str, response, starts, name, path):
         # print(f"下载器{name}号开始写入文件")
-        async with aiofiles.open("{}/{}.{}".format(path, title, tail), "rb+") as file:
+        async with aiofiles.open(f"{path}/{title}.{tail}", "rb+") as file:
             await file.seek(starts)
             await file.write(response)
 
     async def download_video(self, video_data: dict, name, session):
-        # print(f"启动下载器{name}号")
-        size = video_data['size']
+        # print(f"切换到下载器{name}号 =====> ok")
         title = video_data['title']
         tail = video_data['format']
         url = video_data['url']
         starts = video_data['start']
         end = video_data['end']
-        if AioBilibili.create_file(title, tail, size, self.path):
-            # async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=self.fake_headers(starts, end)) as response:
-                res = await response.content.read()
-                await AioBilibili.write_file(title, tail, res, starts, name, self.path)
-        else:
-            print("文件创建失败")
-            return
+        async with session.get(url, headers=self.fake_headers(starts, end)) as response:
+            res = await response.content.read()
+            await AioBilibili.write_file(title, tail, res, starts, name, self.path)
 
     async def put_queue(self, session):
-        print("==> 开始获取数据")
+        print("Status: ==> 开始获取数据")
         # 获取数据存入队列
         data = await self.get_data(session)
-        print("==> 获取成功开始组装")
+        print("Status: ==> 获取数据成功")
         for info in data['pages']:
             cid = await self.get_video_download_url(info['cid'], session)
             # await asyncio.sleep(0.1)
@@ -137,24 +135,36 @@ class AioBilibili:
     async def run_download_util_complete(self, name, session):
         while self.flag:
             # 这里需要让出一下cpu时间，要不然直接卡死在这里了
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0)
             while not self.queue.empty():
                 value = self.queue.get_nowait()
-                await self.download_video(value, name, session)
+                size = value['size']
+                title = value['title']
+                tail = value['format']
+                if AioBilibili.create_file(title, tail, size, self.path):
+                    await self.download_video(value, name, session)
+                else:
+                    print(f"{title}.{tail} 创建失败")
+                    exit()
 
     async def start(self):
         tasks = []
+        if len(self.path) > 0 and not os.path.exists(f"{self.path}"):
+            os.mkdir(self.path)
         async with aiohttp.ClientSession() as session:
             get_data = asyncio.create_task(self.put_queue(session))
             tasks.append(get_data)
-            for i in range(self.thread):
-                download = asyncio.create_task(self.run_download_util_complete(i, session))
+            while self.thread < 1:
+                await asyncio.sleep(0)
+            for name in range(self.thread):
+                download = asyncio.create_task(self.run_download_util_complete(name, session))
                 tasks.append(download)
             await asyncio.gather(*tasks)
 
     def main(self):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.start())
+
         # 不知道为啥python3.7+的写法会报错加sleep也不行
         # asyncio.run(self.start())
 
@@ -162,8 +172,7 @@ class AioBilibili:
 if __name__ == '__main__':
     # 花费了: 48.05197620391846
     b = AioBilibili()
-    b.url = "https://www.bilibili.com/video/BV11K4y1W7LG?spm_id_from=333.851.b_7265636f6d6d656e64.1"
-    # b.url = "https://www.bilibili.com/video/BV1DX4y1K7cU?spm_id_from=333.851.b_7265636f6d6d656e64.6"
+    b.url = "https://www.bilibili.com/video/BV1DX4y1K7cU?spm_id_from=333.851.b_7265636f6d6d656e64.6"
     start = time.time()
     b.main()
-    print(f"花费了: {time.time() - start}")
+    print(f"Status: == > 下载完成共花费了: {time.time() - start} 秒")
